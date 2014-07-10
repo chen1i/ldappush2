@@ -60,7 +60,7 @@ int Settings::ParseCLI(int argc, char* argv[])
 
         if (vm_.count("help")) {
             ShowCLIOptions();
-            exit(-1);
+            exit(0);
         }
 
         if (vm_.count("version")) {

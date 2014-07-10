@@ -20,7 +20,7 @@ namespace dpc
 #define stdstring2LPWSTR(str) const_cast<LPWSTR>((Mordor::toUtf16(str)).c_str())
 
 
-bool writeRegistry(std::string key, std::string name, std::string value, std::string encrypt_string)
+bool WriteRegistry(std::string key, std::string name, std::string value, std::string encrypt_string)
 {
     HKEY hKey;
     bool success = false;
@@ -51,7 +51,7 @@ bool writeRegistry(std::string key, std::string name, std::string value, std::st
     return success;
 }
 
-std::string readRegistry(std::string key, std::string name, std::string encrypt_string)
+std::string ReadRegistry(std::string key, std::string name, std::string encrypt_string)
 {
     std::string returnValue;
     HKEY hKey;
@@ -92,5 +92,13 @@ std::string readRegistry(std::string key, std::string name, std::string encrypt_
     return returnValue;
 }
 
+std::wstring GetEventLogDllPath()
+{
+    TCHAR msgDllPath[1024];
+    GetModuleFileName(NULL, msgDllPath, 1024);
+    std::wstring path(msgDllPath);
+    path.replace(path.length()-4, 4, L"Event.dll"); // xxx.exe -> xxxEvent.dll
+    return path;
+}
 
 }

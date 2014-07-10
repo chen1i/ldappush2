@@ -5,6 +5,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodeJam", "CodeJam.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordor", "..\..\work\SCM\mordor\mordor\mordor.vcxproj", "{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SysEvent", "SysEvent\SysEvent.vcxproj", "{E94B4255-B91A-4189-AC9C-100B792174D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -27,6 +29,12 @@ Global
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|Win32.Build.0 = Release|Win32
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|x64.ActiveCfg = Release|x64
 		{FEAC089A-CC93-49C3-8F22-A9AB96F6273A}.Release|x64.Build.0 = Release|x64
+		{E94B4255-B91A-4189-AC9C-100B792174D1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E94B4255-B91A-4189-AC9C-100B792174D1}.Debug|Win32.Build.0 = Debug|Win32
+		{E94B4255-B91A-4189-AC9C-100B792174D1}.Debug|x64.ActiveCfg = Debug|Win32
+		{E94B4255-B91A-4189-AC9C-100B792174D1}.Release|Win32.ActiveCfg = Release|Win32
+		{E94B4255-B91A-4189-AC9C-100B792174D1}.Release|Win32.Build.0 = Release|Win32
+		{E94B4255-B91A-4189-AC9C-100B792174D1}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

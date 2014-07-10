@@ -1,5 +1,8 @@
 #include "StdAfx.h"
 #include "ldap_client.h"
+#include "logger.h"
+
+REGISTER_LOGGER("dpc:connector:ldap");
 
 namespace dpc {
 LdapClient::LdapClient(std::string host, int port, std::string user, std::string password)
