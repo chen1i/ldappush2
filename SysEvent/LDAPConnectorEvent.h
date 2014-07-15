@@ -47,7 +47,7 @@
 //
 // MessageText:
 //
-// ldap connector(INFO): %1.
+// ldap connector(INFO): %1
 //
 #define MSG_EVENTLOG_INFO                ((DWORD)0x40020001L)
 
@@ -56,7 +56,7 @@
 //
 // MessageText:
 //
-// ldap connector(WARN): %1.
+// ldap connector(WARN): %1
 //
 #define MSG_EVENTLOG_WARN                ((DWORD)0x80020002L)
 
@@ -65,7 +65,7 @@
 //
 // MessageText:
 //
-// ldap connector(ERROR): %1.
+// ldap connector(ERROR): %1
 //
 #define MSG_EVENTLOG_ERROR               ((DWORD)0xC0020003L)
 

@@ -15,26 +15,26 @@ Settings::Settings(int screen_width):
     desc_(screen_width, screen_width/2)
 {
 	desc_.add_options()
-		("help,h", "this help mesasge")
-		("partner_id,i", po::value<std::string>(), "Id of partner who enable FedID. Always required")
-		("api_key,k", po::value<std::string>(), "Required during configuration. Do not use during normal operations")
-		("ldap_req_timeout,m", po::value<int>()->default_value(120), "Time out seconds when talking to ldap server, default is 120 seconds")
-		("ldp_page_size,w", po::value<int>()->default_value(100), "Batch size of each ldap query, default is 100 records")
-		("ldap_username,u", po::value<std::string>(), "Required during configuration. Do not use during normal operations")
-		("ldap_password,p", po::value<std::string>(), "Required during configuration. Do not use during normal operations")
-		("show_ldap_config,l", "Optional during normal operations. True when provided")
-		("bifrost_url,b", po::value<std::string>()->default_value("services.mozy.com"), "Bifrost endpoint, default is 'services.mozy.com'")
-        ("ldap2_host", po::value<std::string>(), "Secondary ldap instance IP")
-        ("ldap2_port", po::value<int>()->default_value(389), "Secondary ldap instance port, default is 389, only valid when ldap2_host is provided.")
-        ("ldap2_username", po::value<std::string>(), "Logon name to secondary ldap instance, only valid when ldap2_host is provided.")
-        ("ldap2_password", po::value<std::string>(), "Logon password to secondary ldap instance, only valid when ldap2_host is provided.")
-        ("proxy_uri", po::value<std::string>(), "Optional during configuration. Use the format: 'https://proxy-server.mycorp.com:1234/' or 'https://10.167.14.116:1234/'")
-		("proxy_logon_name", po::value<std::string>(), "Optional during configuration")
-		("proxy_logon_password", po::value<std::string>(),"Optional during configuration")
-		("test_mode,t", "Optional during normal operations. True when provided")
-		("ignore_certificates,s", "Optional during normal operations, True when provided")
-        ("verbose,v", "Show more detailed message. True when provided")
-		("version", "Show version info")
+		("help,h", "this help mesasge. [C] config only. [R] normal run only. [O] optional setting.")
+		("partner_id,i", po::value<std::string>(), "[C,R] Id of partner who enable FedID")
+		("api_key,k", po::value<std::string>(), "[C] Partner's API key, generated in Admin Console")
+		("ldap_req_timeout,m", po::value<int>()->default_value(120), "[R,O] Timeout seconds when query ldap server, default is 120 seconds")
+		("ldp_page_size,w", po::value<int>()->default_value(100), "[R,O] Batch size of each ldap query, default is 100, no larger than 1000")
+		("ldap_username,u", po::value<std::string>(), "[C] Logon name to AD server")
+		("ldap_password,p", po::value<std::string>(), "[C] Logon password to AD server")
+		("show_ldap_config,l", "[R,O] Show ldap settings. True when provided")
+		("bifrost_url,b", po::value<std::string>()->default_value("https://services.mozy.com"), "[R,O] Bifrost endpoint, default is 'https://services.mozy.com'")
+        ("ldap2_host", po::value<std::string>(), "[C,O] Secondary ldap instance IP")
+        ("ldap2_port", po::value<int>()->default_value(389), "[C,O] Secondary ldap instance port, default is 389, only valid when ldap2_host is provided.")
+        ("ldap2_username", po::value<std::string>(), "[C,O] Logon name to secondary ldap instance, only valid when ldap2_host is provided.")
+        ("ldap2_password", po::value<std::string>(), "[C,O] Logon password to secondary ldap instance, only valid when ldap2_host is provided.")
+        ("proxy_uri", po::value<std::string>(), "[C,O] Global proxy setting. format: 'https://proxy-server.mycorp.com:1234/' or 'http://10.167.14.116:1234/'")
+		("proxy_logon_name", po::value<std::string>(), "[C,O] Proxy username")
+		("proxy_logon_password", po::value<std::string>(),"[C,O] Proxy password")
+		("test_mode,t", "[R,O] Dry run mode. True when provided")
+		("ignore_certificates,s", "[C,R,O] Ignore SSL certificate checking. True when provided")
+        ("verbose,v", "[C,R,O] Show more detailed message. True when provided")
+		("version", "[C] Show version info and quit")
 		;
 }
 
@@ -76,7 +76,7 @@ int Settings::ParseCLI(int argc, char* argv[])
 
 bool Settings::IsConfigMode()
 {
-    return false;
+    return true;
 }
 int Settings::PersistToRegistry()
 {
@@ -89,9 +89,9 @@ std::string Settings::PartnerId() const
     return vm_["partner_id"].as<std::string>();
 }
 std::string Settings::BifrostEndpoint() const
-    {return "";}
+    {return vm_["bifrost_url"].as<std::string>();}
 std::string Settings::ApiKey() const
-    {return "";}
+    {return vm_["api_key"].as<std::string>();}
 std::string Settings::CurrentVersion() const
     {return "";}
 std::string Settings::LdapHost() const

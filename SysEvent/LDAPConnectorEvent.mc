@@ -19,7 +19,7 @@ Severity=Informational
 Facility=Runtime
 SymbolicName=MSG_EVENTLOG_INFO
 Language=English
-ldap connector(INFO): %1.
+ldap connector(INFO): %1
 .
 
 MessageId=0x2
@@ -27,7 +27,7 @@ Severity=Warning
 Facility=Runtime
 SymbolicName=MSG_EVENTLOG_WARN
 Language=English
-ldap connector(WARN): %1.
+ldap connector(WARN): %1
 .
 
 MessageId=0x3
@@ -35,5 +35,5 @@ Severity=Error
 Facility=Runtime
 SymbolicName=MSG_EVENTLOG_ERROR
 Language=English
-ldap connector(ERROR): %1.
+ldap connector(ERROR): %1
 .

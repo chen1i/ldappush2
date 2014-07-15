@@ -18,7 +18,6 @@ const int DPC_SUCCESS       = 0;
 int do_config(Settings& setting);
 int do_sync(dpc::Settings& setting);
 
-//static ConfigVar<std::string>::ptr log_file_setting = Config::lookup<std::string>("log.file1", std::string("ldap_connector.log"), "log file");
 REGISTER_LOGGER("dpc:connector:main");
 
 MORDOR_MAIN(int argc, char* argv[])
@@ -29,12 +28,12 @@ MORDOR_MAIN(int argc, char* argv[])
 #endif
     Config::lookup("log.file")->fromString("z.log");
     Config::lookup("log.stdout")->fromString("1");
-//    Config::lookup("log.debug")->fromString("1"); //# also add environment var LOG_DEBUGMASK=xxx in VS Debug setting
-    MORDOR_LOG_DEBUG(g_log)<<"can you see this debug?";
-    MORDOR_LOG_INFO(g_log)<<"can you see this info?";
-    MORDOR_LOG_WARNING(g_log)<<"can you see this warning?";
-    MORDOR_LOG_ERROR(g_log)<<"can you see this error?";
-    MORDOR_LOG_FATAL(g_log)<<"can you see this fatal?";
+
+    std::stringstream temp_stream;
+    for (int i=0; i<argc; i++)
+        temp_stream << argv[i] << ' ';
+    std::string all_args = temp_stream.str(); // it has an additional space char at the end.
+    MORDOR_LOG_INFO(g_log) << "Full Command Line: "<< all_args.substr(0, all_args.size() -1);
 
     Settings mysetting;
     mysetting.ParseCLI(argc, argv);
@@ -50,10 +49,14 @@ MORDOR_MAIN(int argc, char* argv[])
 
 int do_config(Settings& setting)
 {
-    BifrostClient bifrost(setting.PartnerId(), setting.BifrostEndpoint());
+    BifrostClient bifrost(setting.PartnerId(), setting.ApiKey(), setting.BifrostEndpoint());
 
-    if (bifrost.CheckApiKey(setting.ApiKey()) == false)
+    MORDOR_LOG_INFO(g_log) << bifrost.SvcAuthenticate();
+
+    if (bifrost.CheckApiKey() == false)
         return DPC_CONFIG_FAILED;
+
+    MORDOR_LOG_INFO(g_log) << "API KEY is valid";
 
     // bifrost instance is valid from now on.
     // it can be used to do version report/check
