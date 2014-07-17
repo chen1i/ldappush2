@@ -92,6 +92,8 @@ std::string Settings::BifrostEndpoint() const
     {return vm_["bifrost_url"].as<std::string>();}
 std::string Settings::ApiKey() const
     {return vm_["api_key"].as<std::string>();}
+bool Settings::IgnoreSslCheck() const
+{ return vm_.count("ignore_certificates")>0;}
 std::string Settings::CurrentVersion() const
     {return "";}
 std::string Settings::LdapHost() const

@@ -21,6 +21,7 @@ public:
     std::string PartnerId() const;
     std::string BifrostEndpoint() const;
     std::string ApiKey() const;
+    bool IgnoreSslCheck() const;
     std::string CurrentVersion() const;
     std::string LdapHost() const;
     int LdapPort() const;

@@ -5,7 +5,9 @@
 #include <mordor/json.h>
 #include <mordor/uri.h>
 #include <mordor/iomanager.h>
+#include <mordor/streams/ssl.h>
 #include <mordor/http/client.h>
+#include <mordor/http/broker.h>
 
 namespace dpc {
 
@@ -25,10 +27,10 @@ public:
     typedef Mordor::JSON::Object SyncConfig;
     typedef boost::shared_ptr<BifrostClient> ptr;
 
-    BifrostClient(std::string partner_id, std::string key_text, std::string svc_address = SERVER_ROOT);
+    BifrostClient(std::string partner_id, std::string key_text, std::string svc_address = SERVER_ROOT, bool ignore_ssl_cert = false);
     ~BifrostClient(void);
 
-    // Bifrost API about fedid sync
+    // Bifrost APIs for fedid sync
     AuthorizationHeader SvcAuthenticate(bool force_new = false);
     SyncConfig SvcGetSyncConfig();
     JobId SubmitSyncData();
@@ -38,12 +40,17 @@ public:
 
 private:
     std::string authenticate();
-    Mordor::HTTP::ClientRequest::ptr makeClientRequestObj(Mordor::HTTP::Request& rh, std::string path);
+    Mordor::HTTP::RequestBroker::ptr makeClientRequestObj(Mordor::HTTP::Request& rh, std::string path);
+    void initSSLCertificates();
 
 private:
+    // config attributes copied from Settings obj
     std::string partner_id_;
     std::string api_key_;
+    bool check_ssl_;
 
+    // runtime attributes
+    boost::shared_ptr<SSL_CTX> ssl_ctx_;
     Mordor::URI root_uri_;
     boost::shared_ptr<Mordor::IOManager> io_mgr_;
     std::string auth_token_;

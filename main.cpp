@@ -49,7 +49,7 @@ MORDOR_MAIN(int argc, char* argv[])
 
 int do_config(Settings& setting)
 {
-    BifrostClient bifrost(setting.PartnerId(), setting.ApiKey(), setting.BifrostEndpoint());
+    BifrostClient bifrost(setting.PartnerId(), setting.ApiKey(), setting.BifrostEndpoint(), setting.IgnoreSslCheck());
 
     MORDOR_LOG_INFO(g_log) << bifrost.SvcAuthenticate();
 
