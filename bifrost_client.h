@@ -19,6 +19,8 @@ const std::string VERSION_PATH= "/fedid/connector_version/";
 const std::string VERSION_ALERT_PATH = "/fedid/connector_version_events";
 const std::string REGISTER_PATH = "/fedid/connector_register/";
 
+class Settings;
+
 class BifrostClient
 {
 public:
@@ -27,7 +29,7 @@ public:
     typedef Mordor::JSON::Object SyncConfig;
     typedef boost::shared_ptr<BifrostClient> ptr;
 
-    BifrostClient(std::string partner_id, std::string key_text, std::string svc_address = SERVER_ROOT, bool ignore_ssl_cert = false);
+    explicit BifrostClient(Settings& all_option);
     ~BifrostClient(void);
 
     // Bifrost APIs for fedid sync
@@ -48,6 +50,9 @@ private:
     std::string partner_id_;
     std::string api_key_;
     bool check_ssl_;
+    std::string proxy_uri_;
+    std::string proxy_user_;
+    std::string proxy_password_;
 
     // runtime attributes
     boost::shared_ptr<SSL_CTX> ssl_ctx_;

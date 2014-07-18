@@ -4,39 +4,28 @@
 #include <cassert>
 #include <mordor/http/broker.h>
 #include <mordor/http/client.h>
+#include <mordor/http/proxy.h>
 #include <mordor/streams/std.h>
 
 #include "logger.h"
+#include "settings.h"
 #include "ssl_certs.h"
 #include "win_helpers.h"
 
 REGISTER_LOGGER("dpc:connector:bifrost");
 
 namespace dpc {
-void BifrostClient::initSSLCertificates()
-{
-    ssl_ctx_.reset(SSL_CTX_new(SSLv23_client_method()), &SSL_CTX_free);
-    X509_STORE *certstore = SSL_CTX_get_cert_store(ssl_ctx_.get());
-    assert(certstore);
-
-    LoadAppCertificates(certstore);
-#ifdef WINDOWS
-    if (! AddCertificatesFromWindowsStore(certstore, L"ROOT"))
-        MORDOR_LOG_WARNING(g_log) << "Failed to load machine's root certificates";
-    if (! AddCertificatesFromWindowsStore(certstore, L"CA"))
-        MORDOR_LOG_WARNING(g_log) << "Failed to load machine's intermediate certificates";
-#endif
-
-} // initSSLCertificates()
-
-
-BifrostClient::BifrostClient(std::string partner_id, std::string key_text, std::string svc_address, bool ignore_ssl_cert):
-    partner_id_(partner_id),
-    api_key_(key_text),
-    check_ssl_(!ignore_ssl_cert)
+BifrostClient::BifrostClient(Settings& all_options):
+    partner_id_(all_options.PartnerId()),
+    api_key_(all_options.ApiKey()),
+    check_ssl_(!all_options.IgnoreSslCheck()),
+    proxy_uri_(all_options.ProxyUri()),
+    proxy_user_(all_options.ProxyUser()),
+    proxy_password_(all_options.ProxyPassword())
 {
     auth_token_ = "";
-    root_uri_ = svc_address; //convert string to a URI obj.
+    root_uri_ = all_options.BifrostEndpoint(); //convert string to a URI obj.
+
     //initial ssl_ctx_ if necessary
     if (root_uri_.scheme() == "https" || !root_uri_.schemeDefined()) {
         initSSLCertificates();
@@ -81,6 +70,22 @@ int BifrostClient::CheckLatestClientVersion()
 {
     return 0;
 }
+
+void BifrostClient::initSSLCertificates()
+{
+    ssl_ctx_.reset(SSL_CTX_new(SSLv23_client_method()), &SSL_CTX_free);
+    X509_STORE *certstore = SSL_CTX_get_cert_store(ssl_ctx_.get());
+    assert(certstore);
+
+    LoadAppCertificates(certstore);
+#ifdef WINDOWS
+    if (! AddCertificatesFromWindowsStore(certstore, L"ROOT"))
+        MORDOR_LOG_WARNING(g_log) << "Failed to load machine's root certificates";
+    if (! AddCertificatesFromWindowsStore(certstore, L"CA"))
+        MORDOR_LOG_WARNING(g_log) << "Failed to load machine's intermediate certificates";
+#endif
+
+} // initSSLCertificates()
 
 static boost::shared_ptr<Mordor::JSON::Value> parseJsonStream( boost::shared_ptr<Mordor::Stream> stream)
 {
@@ -128,18 +133,75 @@ std::string BifrostClient::authenticate()
     }
 }
 
+static bool authProxy(Mordor::HTTP::ClientRequest::ptr priorRequest, std::string& scheme, std::string& username, std::string& password, const std::string c_user, const std::string c_password)
+{
+    if (!priorRequest)
+        return false;
+    username = c_user;
+    password = c_password;
+    const Mordor::HTTP::ChallengeList &challengeList = priorRequest->response().response.proxyAuthenticate;
+#ifdef WINDOWS
+    if (Mordor::HTTP::isAcceptable(challengeList, "Negotiate")) {
+        scheme = "Negotiate";
+        return true;
+    }
+    if (Mordor::HTTP::isAcceptable(challengeList, "NTLM")) {
+        scheme = "NTLM";
+        return true;
+    }
+#endif
+    if (Mordor::HTTP::isAcceptable(challengeList, "Digest")) {
+        scheme = "Digest";
+        return true;
+    }
+    if (Mordor::HTTP::isAcceptable(challengeList, "Basic")) {
+        scheme = "Basic";
+        return true;
+    }
+    return false;
+}
+
+// This method is called by Mordor for each request, to get proxy information.
+static std::vector<Mordor::URI> setProxy(const Mordor::URI &dest, const std::string c_proxy)
+{
+    std::vector<Mordor::URI> proxies;
+
+#ifdef WINDOWS
+    // One side affect of the following is to convert the proxy scheme as specified to the scheme of the
+    // host URI passed in. So if someone messes up and specifies an 'http' proxy, this will fix things up
+    // by changing it to 'https'.
+    proxies = Mordor::HTTP::proxyFromList(dest, c_proxy);
+#else
+    // TODO: If we were to support proxies on linux we
+    // would need to do something here. Load them from a config file for example
+    return std::vector<URI>();
+#endif
+    return proxies;
+} //proxyForUriDg()
+
 Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTTP::Request& rh, std::string path)
 {
     Mordor::URI svcEndpoint = root_uri_;
     svcEndpoint.path.append(path);
 
     Mordor::HTTP::RequestBrokerOptions options;
+
+    // SSL options
     if (check_ssl_ && ssl_ctx_.get()) {
         options.verifySslCertificateHost = options.verifySslCertificate = true;
         options.sslCtx = ssl_ctx_.get();
     }else{
         options.verifySslCertificateHost = options.verifySslCertificate = false;
     }
+
+    // proxy options
+    if (!proxy_uri_.empty()) {
+        MORDOR_LOG_INFO(g_log) << "setting proxy info "<<proxy_uri_;
+        options.getProxyCredentialsDg = boost::bind(&authProxy, _2, _3, _5, _6, proxy_user_, proxy_password_);
+        options.proxyRequestBroker = Mordor::HTTP::createRequestBroker(options).first;
+        options.proxyForURIDg = boost::bind(&setProxy, _1, proxy_uri_);
+    }
+
     options.ioManager = io_mgr_.get();
     Mordor::HTTP::RequestBroker::ptr rb = Mordor::HTTP::createRequestBroker(options).first;
 
@@ -149,4 +211,6 @@ Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTT
 
     return rb;
 }
+
+
 }

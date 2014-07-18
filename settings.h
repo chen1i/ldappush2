@@ -28,6 +28,9 @@ public:
     std::string LdapUser() const;
     std::string LdapPassword() const;
     std::string LdapBaseDN() const;
+    std::string ProxyUri() const;
+    std::string ProxyUser() const;
+    std::string ProxyPassword() const;
 
 private:
     po::options_description desc_;

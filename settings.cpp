@@ -28,7 +28,7 @@ Settings::Settings(int screen_width):
         ("ldap2_port", po::value<int>()->default_value(389), "[C,O] Secondary ldap instance port, default is 389, only valid when ldap2_host is provided.")
         ("ldap2_username", po::value<std::string>(), "[C,O] Logon name to secondary ldap instance, only valid when ldap2_host is provided.")
         ("ldap2_password", po::value<std::string>(), "[C,O] Logon password to secondary ldap instance, only valid when ldap2_host is provided.")
-        ("proxy_uri", po::value<std::string>(), "[C,O] Global proxy setting. format: 'https://proxy-server.mycorp.com:1234/' or 'http://10.167.14.116:1234/'")
+        ("proxy_uri,x", po::value<std::string>(), "[C,O] Global proxy setting. format: 'https://proxy-server.mycorp.com:1234/' or 'http://10.167.14.116:1234/'")
 		("proxy_logon_name", po::value<std::string>(), "[C,O] Proxy username")
 		("proxy_logon_password", po::value<std::string>(),"[C,O] Proxy password")
 		("test_mode,t", "[R,O] Dry run mode. True when provided")
@@ -106,4 +106,33 @@ std::string Settings::LdapPassword() const
     {return "";}
 std::string Settings::LdapBaseDN() const
     {return "";}
+
+std::string Settings::ProxyUri() const
+{
+    if (vm_.count("proxy_uri")>0)
+        return vm_["proxy_uri"].as<std::string>();
+    else
+        return "";
+}
+std::string Settings::ProxyUser() const
+{
+    if (ProxyUri().empty())
+        return "";
+
+    if (vm_.count("proxy_logon_name")>0)
+        return vm_["proxy_logon_name"].as<std::string>();
+    else
+        return "";
+}
+std::string Settings::ProxyPassword() const
+{
+    if (ProxyUri().empty())
+        return "";
+
+    if (vm_.count("proxy_logon_password")>0)
+        return vm_["proxy_logon_password"].as<std::string>();
+    else
+        return "";}
+
+
 } /*namespace dpc*/

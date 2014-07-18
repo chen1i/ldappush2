@@ -49,7 +49,7 @@ MORDOR_MAIN(int argc, char* argv[])
 
 int do_config(Settings& setting)
 {
-    BifrostClient bifrost(setting.PartnerId(), setting.ApiKey(), setting.BifrostEndpoint(), setting.IgnoreSslCheck());
+    BifrostClient bifrost(setting);
 
     MORDOR_LOG_INFO(g_log) << bifrost.SvcAuthenticate();
 
@@ -69,7 +69,7 @@ int do_config(Settings& setting)
 
 int do_sync(dpc::Settings& setting)
 {
-    BifrostClient::ptr bifrost(new BifrostClient(setting.PartnerId(), setting.BifrostEndpoint()));
+    BifrostClient::ptr bifrost(new BifrostClient(setting));
     bifrost->ReportVersion(setting.CurrentVersion());
     bifrost->CheckLatestClientVersion();
 
