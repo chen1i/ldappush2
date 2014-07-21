@@ -7,6 +7,7 @@
 #include <mordor/http/proxy.h>
 #include <mordor/streams/std.h>
 
+#include "sync_config.h"
 #include "logger.h"
 #include "settings.h"
 #include "ssl_certs.h"
@@ -15,6 +16,25 @@
 REGISTER_LOGGER("dpc:connector:bifrost");
 
 namespace dpc {
+static boost::shared_ptr<Mordor::JSON::Value> parseJsonStream( boost::shared_ptr<Mordor::Stream> stream)
+{
+    boost::shared_ptr<Mordor::JSON::Value> json(new Mordor::JSON::Value());
+    Mordor::JSON::Parser parser(*json);
+    parser.run(stream);
+    assert(parser.final());
+    assert(!parser.error());
+    return json;
+}
+
+template <class T>
+static T getJsonValue(boost::shared_ptr< Mordor::JSON::Value > json, const char *fields)
+{
+    Mordor::JSON::Object rootObj = boost::get<Mordor::JSON::Object>(*json);
+    Mordor::JSON::Value::const_iterator itKeyLookup = rootObj.find(fields);
+    T retValue = boost::get<T>(itKeyLookup->second);
+    return retValue;
+}
+
 BifrostClient::BifrostClient(Settings& all_options):
     partner_id_(all_options.PartnerId()),
     api_key_(all_options.ApiKey()),
@@ -41,14 +61,35 @@ BifrostClient::~BifrostClient(void)
 
 BifrostClient::AuthorizationHeader BifrostClient::SvcAuthenticate(bool force_new)
 {
-    authenticate();
+    if (auth_token_.empty() || force_new)
+        authenticate();
+
+    // the auth_token_ normally expired after 1800 sec. should longer enough
+    // for calling Bifrost.
     return auth_token_;
 }
     
-BifrostClient::SyncConfig BifrostClient::SvcGetSyncConfig()
+Mordor::JSON::Object BifrostClient::SvcGetSyncConfigJson()
 {
-    Mordor::JSON::Object empty;
-    return empty;
+    Mordor::JSON::Object retJson;
+    MORDOR_LOG_INFO(g_log) << "Getting sync config ...";
+
+    Mordor::HTTP::Request rh;
+    Mordor::HTTP::RequestBroker::ptr rb = makeClientRequestObj(rh, SYNCCONFIG_PATH);
+
+    Mordor::HTTP::ClientRequest::ptr request = rb->request(rh);
+
+    if (request->response().status.status == Mordor::HTTP::OK && request->hasResponseBody()) {
+
+        boost::shared_ptr<Mordor::JSON::Value> root = parseJsonStream(request->responseStream());
+
+        retJson = boost::get<Mordor::JSON::Object>(*root);
+
+        MORDOR_LOG_INFO(g_log) << "Get sync config succeed";
+    }else{
+        MORDOR_LOG_ERROR(g_log) << "Get sync config failed ";
+    }
+    return retJson;
 }
     
 BifrostClient::JobId BifrostClient::SubmitSyncData()
@@ -58,8 +99,13 @@ BifrostClient::JobId BifrostClient::SubmitSyncData()
 
 bool BifrostClient::CheckApiKey()
 {
-    //authenticate();
-    return true;
+    if (auth_token_.empty())
+        authenticate();
+
+    std::string pid;
+    SyncConfig sync_config(SvcGetSyncConfigJson());
+
+    return sync_config.PartnerId() == partner_id_;
 }
 int BifrostClient::ReportVersion(std::string version_txt)
 {
@@ -87,31 +133,11 @@ void BifrostClient::initSSLCertificates()
 
 } // initSSLCertificates()
 
-static boost::shared_ptr<Mordor::JSON::Value> parseJsonStream( boost::shared_ptr<Mordor::Stream> stream)
-{
-    boost::shared_ptr<Mordor::JSON::Value> json(new Mordor::JSON::Value());
-    Mordor::JSON::Parser parser(*json);
-    parser.run(stream);
-    assert(parser.final());
-    assert(!parser.error());
-    return json;
-}
-
-template <class T>
-static T getJsonValue( boost::shared_ptr< Mordor::JSON::Value > json, const char *fields)
-{
-    Mordor::JSON::Object rootObj = boost::get<Mordor::JSON::Object>(*json);
-    Mordor::JSON::Value::const_iterator itKeyLookup = rootObj.find(fields);
-    T retValue = boost::get<T>(itKeyLookup->second);
-    return retValue;
-}
-
 std::string BifrostClient::authenticate()
 {
     MORDOR_LOG_INFO(g_log) << "Getting auth token ...";
 
     Mordor::HTTP::Request rh;
-    rh.entity.extension["Api-Key"] = api_key_;
     Mordor::HTTP::RequestBroker::ptr rb = makeClientRequestObj(rh, AUTH_PATH);
     
     Mordor::HTTP::ClientRequest::ptr request = rb->request(rh);
@@ -208,6 +234,12 @@ Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTT
     rh.requestLine.uri = svcEndpoint;
     rh.request.host = svcEndpoint.authority.host();
     rh.entity.extension["Accept"] = "application/vnd.mozy.bifrost+json;v=1";
+    rh.entity.extension["Content-Type"] = "application/json";
+    rh.entity.extension["User-Agent"] = "FedIDPushClient /1.0";
+    if (path == AUTH_PATH)
+        rh.entity.extension["Api-Key"] = api_key_;
+    else
+        rh.entity.extension["Authorization"] = auth_token_;
 
     return rb;
 }

@@ -53,8 +53,10 @@ int do_config(Settings& setting)
 
     MORDOR_LOG_INFO(g_log) << bifrost.SvcAuthenticate();
 
-    if (bifrost.CheckApiKey() == false)
+    if (bifrost.CheckApiKey() == false) {
+        MORDOR_LOG_ERROR(g_log) << "API KEY is invalid for this partner";
         return DPC_CONFIG_FAILED;
+    }
 
     MORDOR_LOG_INFO(g_log) << "API KEY is valid";
 

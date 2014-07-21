@@ -20,13 +20,13 @@ const std::string VERSION_ALERT_PATH = "/fedid/connector_version_events";
 const std::string REGISTER_PATH = "/fedid/connector_register/";
 
 class Settings;
+class SyncConfig;
 
 class BifrostClient
 {
 public:
     typedef std::string AuthorizationHeader;
     typedef std::string JobId;
-    typedef Mordor::JSON::Object SyncConfig;
     typedef boost::shared_ptr<BifrostClient> ptr;
 
     explicit BifrostClient(Settings& all_option);
@@ -34,7 +34,7 @@ public:
 
     // Bifrost APIs for fedid sync
     AuthorizationHeader SvcAuthenticate(bool force_new = false);
-    SyncConfig SvcGetSyncConfig();
+    Mordor::JSON::Object SvcGetSyncConfigJson();
     JobId SubmitSyncData();
     bool CheckApiKey();
     int ReportVersion(std::string version_txt);
