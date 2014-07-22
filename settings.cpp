@@ -95,7 +95,7 @@ std::string Settings::ApiKey() const
 bool Settings::IgnoreSslCheck() const
 { return vm_.count("ignore_certificates")>0;}
 std::string Settings::CurrentVersion() const
-    {return "";}
+    {return GetAppVersion();}
 std::string Settings::LdapHost() const
     {return "";}
 int Settings::LdapPort() const

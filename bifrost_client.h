@@ -37,12 +37,13 @@ public:
     Mordor::JSON::Object SvcGetSyncConfigJson();
     JobId SubmitSyncData();
     bool CheckApiKey();
-    int ReportVersion(std::string version_txt);
-    int CheckLatestClientVersion();
+    int ReportVersion(const std::string version_txt);
+    int CheckLatestClientVersion(const std::string version_txt);
 
 private:
     std::string authenticate();
-    Mordor::HTTP::RequestBroker::ptr makeClientRequestObj(Mordor::HTTP::Request& rh, std::string path);
+    void sendConnectorVersionEvent(int event_type);
+    Mordor::HTTP::RequestBroker::ptr makeClientRequestObj(Mordor::HTTP::Request& rh, const std::string path, const std::string method = Mordor::HTTP::GET);
     void initSSLCertificates();
 
 private:

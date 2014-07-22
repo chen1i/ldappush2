@@ -64,7 +64,7 @@ int do_config(Settings& setting)
     // it can be used to do version report/check
     bifrost.ReportVersion(setting.CurrentVersion());
 
-    bifrost.CheckLatestClientVersion();
+    bifrost.CheckLatestClientVersion(setting.CurrentVersion());
 
     return setting.PersistToRegistry();
 }
@@ -73,7 +73,7 @@ int do_sync(dpc::Settings& setting)
 {
     BifrostClient::ptr bifrost(new BifrostClient(setting));
     bifrost->ReportVersion(setting.CurrentVersion());
-    bifrost->CheckLatestClientVersion();
+    bifrost->CheckLatestClientVersion(setting.CurrentVersion());
 
     //bifrost is pointing to a usable instance to talk with endpoint
     

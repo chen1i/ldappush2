@@ -87,7 +87,7 @@ std::string ReadRegistry(std::string key, std::string name, std::string encrypt_
             LocalFree(dataOut.pbData);
         }
     }else{
-        returnValue = (char *)fieldValue;
+        returnValue = Mordor::toUtf8(std::wstring((wchar_t*)fieldValue));
     }
     delete[] fieldValue;
 
@@ -140,4 +140,20 @@ bool AddCertificatesFromWindowsStore(X509_STORE *app_store, LPCWSTR storeName)
     CertCloseStore(hStore, 0);
     return true;
 } // AddCertificatesFromWindowsStore()
+
+std::string GetWindowsInternalVersion()
+{
+    std::string ver_txt = ReadRegistry(std::string("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"),
+                                       std::string("CurrentVersion"),
+                                       "");
+    return ver_txt;
+}
+
+std::string GetAppVersion()
+{
+    std::string ver_txt = ReadRegistry(std::string("SOFTWARE\\Mozy\\LDAPConnector"),
+                                       std::string("Version"),
+                                       "");
+    return ver_txt;
+}
 }

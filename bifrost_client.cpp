@@ -107,13 +107,89 @@ bool BifrostClient::CheckApiKey()
 
     return sync_config.PartnerId() == partner_id_;
 }
-int BifrostClient::ReportVersion(std::string version_txt)
+
+static void writeBody(Mordor::HTTP::ClientRequest::ptr r, const std::string &body)
 {
-    return 0;
+    r->requestStream()->write(body.c_str(), body.size());
+    r->requestStream()->close();
 }
-    
-int BifrostClient::CheckLatestClientVersion()
+int BifrostClient::ReportVersion(const std::string version_txt)
 {
+    MORDOR_LOG_INFO(g_log) << "Begin to update connector version to Admin Console";
+    Mordor::HTTP::Request rh;
+    Mordor::HTTP::RequestBroker::ptr rb = makeClientRequestObj(rh, REGISTER_PATH + partner_id_, Mordor::HTTP::PUT);
+    
+    // providing register json
+    Mordor::JSON::Object register_json;
+    register_json["partner_id"] = boost::lexical_cast<long long>(partner_id_);
+    register_json["version"] = version_txt;
+    register_json["os"] = std::string("windows");
+    register_json["os_version"] = GetWindowsInternalVersion();
+
+    std::ostringstream oss;
+    oss<<register_json;
+    std::string body = oss.str();
+    rh.entity.contentLength = body.size();
+
+    Mordor::HTTP::ClientRequest::ptr request = rb->request(rh, false, boost::bind(&writeBody, _1, boost::cref(body)));
+
+    Mordor::HTTP::Status status_code = request->response().status.status;
+    if (status_code == Mordor::HTTP::CREATED || status_code == Mordor::HTTP::OK) {
+        MORDOR_LOG_INFO(g_log) << "Update connector version succeeded";
+    }else{
+        MORDOR_LOG_WARNING(g_log) << "Update connector version failed: status code = "<<status_code;
+    }
+    return (int)status_code;
+}
+
+//check if the version of the connector is active, deprecated or active
+//return: 0 - active, -1 - deprecated, -2 - outdated
+int BifrostClient::CheckLatestClientVersion(const std::string curr_version)
+{
+    using namespace Mordor;
+    MORDOR_LOG_INFO(g_log) << "Begin to check latest version from Admin Console";
+    HTTP::Request rh;
+    HTTP::RequestBroker::ptr rb = makeClientRequestObj(rh, VERSION_PATH + curr_version+"_windows");
+
+    HTTP::ClientRequest::ptr request = rb->request(rh);
+
+    HTTP::Status status_code = request->response().status.status;
+    if (status_code != HTTP::OK) {
+        MORDOR_LOG_WARNING(g_log) << "Check connector version failed, status code is "<<status_code;
+    }else{
+        // this API will return a JSON as checking result
+        if(!request->hasResponseBody()) {
+            MORDOR_LOG_WARNING(g_log) << "Check connector version return 200, but w/o body";
+            return 0;
+        }
+
+        MORDOR_LOG_INFO(g_log) << "Check connector version succeeded";
+        boost::shared_ptr<Mordor::JSON::Value> root = parseJsonStream(request->responseStream());
+        JSON::Object::const_iterator p = root->find("items");
+        JSON::Array arr_item = boost::get<JSON::Array>(p->second);
+        JSON::Array::const_iterator q = arr_item.begin();
+        if(q != arr_item.end()) {
+            p = q->find("data");
+            JSON::Object data = boost::get<JSON::Object>(p->second);
+            p = data.find("status");
+            std::string status = boost::get<std::string>(p->second);
+
+            if (status == "deprecated") {
+                MORDOR_LOG_ERROR(g_log) << "This connector version is no longer supported. Please update it";
+                sendConnectorVersionEvent(-2);
+                return -2;
+            } else if (status == "to-be-deprecated") {
+                MORDOR_LOG_WARNING(g_log) << "This connector is deprecated. You are suggested to upgrade it";
+                sendConnectorVersionEvent(-1);
+                return -1;
+            } else {
+                MORDOR_LOG_INFO(g_log) << "Version check OK";
+            }
+        } else {
+            MORDOR_LOG_ERROR(g_log) << "Cannot find version check result for this connector";
+            return 0;
+        }
+    }
     return 0;
 }
 
@@ -156,6 +232,41 @@ std::string BifrostClient::authenticate()
     }else{
         MORDOR_LOG_ERROR(g_log) << "Request auth token failed ";
         return "";
+    }
+}
+
+void BifrostClient::sendConnectorVersionEvent(int event_type)
+{
+    MORDOR_LOG_INFO(g_log) << "Begin to send connector version outdated/deprecated notification";
+    Mordor::HTTP::Request rh;
+    Mordor::HTTP::RequestBroker::ptr rb = makeClientRequestObj(rh, VERSION_ALERT_PATH, Mordor::HTTP::POST);
+
+    // providing parameter json
+    Mordor::JSON::Object param_json, tmp_json;
+    boost::posix_time::ptime now(boost::posix_time::second_clock::universal_time());
+    std::string now_str = to_iso_extended_string(now);
+
+    param_json["timestamp"] = now_str;
+    if (event_type == -1)
+        param_json["type"] = std::string("com.mozy.fedid.connector.version.to-be-deprecated");
+    else
+        param_json["type"] = std::string("com.mozy.fedid.connector.version.deprecated");
+    tmp_json["entity_type"] = std::string("partner");
+    tmp_json["entity_id"] = boost::lexical_cast<long long>(partner_id_);
+    param_json["source"] = tmp_json;
+
+    std::ostringstream oss;
+    oss<<param_json;
+    std::string body = oss.str();
+    rh.entity.contentLength = body.size();
+
+    Mordor::HTTP::ClientRequest::ptr request = rb->request(rh, false, boost::bind(&writeBody, _1, boost::cref(body)));
+
+    Mordor::HTTP::Status status_code = request->response().status.status;
+    if (status_code != Mordor::HTTP::CREATED) {
+        MORDOR_LOG_ERROR(g_log) << "Sending connector version outdated/deprecated notification failed, POST return " << status_code;
+    } else {
+        MORDOR_LOG_INFO(g_log) << "Sending connector version outdated/deprecated notification succeeded";
     }
 }
 
@@ -205,7 +316,7 @@ static std::vector<Mordor::URI> setProxy(const Mordor::URI &dest, const std::str
     return proxies;
 } //proxyForUriDg()
 
-Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTTP::Request& rh, std::string path)
+Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTTP::Request& rh, const std::string path, const std::string method)
 {
     Mordor::URI svcEndpoint = root_uri_;
     svcEndpoint.path.append(path);
@@ -222,7 +333,7 @@ Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTT
 
     // proxy options
     if (!proxy_uri_.empty()) {
-        MORDOR_LOG_INFO(g_log) << "setting proxy info "<<proxy_uri_;
+        MORDOR_LOG_DEBUG(g_log) << "setting proxy info "<<proxy_uri_;
         options.getProxyCredentialsDg = boost::bind(&authProxy, _2, _3, _5, _6, proxy_user_, proxy_password_);
         options.proxyRequestBroker = Mordor::HTTP::createRequestBroker(options).first;
         options.proxyForURIDg = boost::bind(&setProxy, _1, proxy_uri_);
@@ -232,10 +343,11 @@ Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTT
     Mordor::HTTP::RequestBroker::ptr rb = Mordor::HTTP::createRequestBroker(options).first;
 
     rh.requestLine.uri = svcEndpoint;
+    rh.requestLine.method = method;
     rh.request.host = svcEndpoint.authority.host();
     rh.entity.extension["Accept"] = "application/vnd.mozy.bifrost+json;v=1";
     rh.entity.extension["Content-Type"] = "application/json";
-    rh.entity.extension["User-Agent"] = "FedIDPushClient /1.0";
+    rh.entity.extension["User-Agent"] = "LDAPConnector /1.4";
     if (path == AUTH_PATH)
         rh.entity.extension["Api-Key"] = api_key_;
     else
@@ -243,6 +355,4 @@ Mordor::HTTP::RequestBroker::ptr BifrostClient::makeClientRequestObj(Mordor::HTT
 
     return rb;
 }
-
-
 }
