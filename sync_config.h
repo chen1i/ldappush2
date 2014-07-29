@@ -1,4 +1,5 @@
 #pragma once
+
 #include <mordor/json.h>
 
 namespace dpc {
@@ -34,6 +35,7 @@ struct DeprovisionRule {
 class SyncConfig
 {
 public:
+    typedef boost::shared_ptr<SyncConfig> ptr;
     SyncConfig(Mordor::JSON::Object& json_obj);
     ~SyncConfig(void);
 
@@ -41,6 +43,8 @@ public:
     { return fedid_partner_; }
     std::string ConfigUrl() const
     { return resource_url_; }
+    LdapConnectSetting LdapSetting() const
+    { return ldap_setting_; }
 
 private:
     void parseLdapSettings(const Mordor::JSON::Object& ldap_conn);

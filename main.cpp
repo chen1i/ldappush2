@@ -8,6 +8,7 @@
 using namespace Mordor;
 
 #include "sync_worker.h"
+#include "sync_config.h"
 #include "logger.h"
 using namespace dpc;
 
@@ -72,18 +73,19 @@ int do_config(Settings& setting)
 int do_sync(dpc::Settings& setting)
 {
     BifrostClient::ptr bifrost(new BifrostClient(setting));
+    bifrost->SvcAuthenticate();
     bifrost->ReportVersion(setting.CurrentVersion());
     bifrost->CheckLatestClientVersion(setting.CurrentVersion());
 
+    SyncConfig sync_config(bifrost->SvcGetSyncConfigJson());
     //bifrost is pointing to a usable instance to talk with endpoint
     
-    LdapClient::ptr ldap(new LdapClient(setting.LdapHost(), setting.LdapPort(), setting.LdapUser(), setting.LdapPassword()));
-    ldap->ConnectLdap(setting.LdapBaseDN());
-
-    // ldap is pointing to a usable instance from now on
-
-    SyncWorker worker(bifrost, ldap, setting);
-    worker.run();
+    LdapClient::ptr ldap(new LdapClient(sync_config.LdapSetting(), setting));
+    if (ldap->ConnectLdap()) {
+        MORDOR_LOG_INFO(g_log) << "ldap is pointing to a usable instance from now on";
+        //SyncWorker worker(bifrost, ldap, sync_config);
+        //worker.run();
+    }
 
     return 0;
 }

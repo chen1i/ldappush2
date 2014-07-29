@@ -23,6 +23,8 @@ public:
     std::string ApiKey() const;
     bool IgnoreSslCheck() const;
     std::string CurrentVersion() const;
+    int LdapQueryTimeout() const;
+    int LdapPageSize() const;
     std::string LdapHost() const;
     int LdapPort() const;
     std::string LdapUser() const;

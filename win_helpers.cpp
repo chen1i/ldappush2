@@ -1,29 +1,42 @@
 #include "stdafx.h"
 #include "win_helpers.h"
-
-// Get Win7+ APIs
-#define _WIN32_WINNT 0x0601
-// Don't include tons of crap from windows.h
-#define WIN32_LEAN_AND_MEAN
-// Define this so security.h works
-#define SECURITY_WIN32
-#include <Windows.h>
-#include <WinCrypt.h>
-
-#include <cassert>
-#include <openssl/err.h>
-#include <mordor/string.h>
+#include <string>
+#include <strsafe.h>
 
 #include "ssl_certs.h"
 #include "logger.h"
-
-#pragma comment(lib, "crypt32.lib")
 
 REGISTER_LOGGER("dpc:connector:win_helpers");
 
 namespace dpc
 {
-#define stdstring2LPWSTR(str) const_cast<LPWSTR>((Mordor::toUtf16(str)).c_str())
+static void PrintLastErrorMessage(LPTSTR lpszFunction)
+{
+    LPVOID lpMsgBuf;
+    LPVOID lpDisplayBuf;
+    DWORD dw = GetLastError();
+
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        dw,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR) &lpMsgBuf,
+        0, NULL );
+
+    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
+        (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
+    StringCchPrintf((LPTSTR)lpDisplayBuf,
+        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+        TEXT("%s failed with error %x: %s"),
+        lpszFunction, dw, lpMsgBuf);
+    MORDOR_LOG_ERROR(g_log) << Mordor::toUtf8((LPCTSTR)lpDisplayBuf);
+
+    LocalFree(lpMsgBuf);
+    LocalFree(lpDisplayBuf);
+}
 
 bool WriteRegistry(std::string key, std::string name, std::string value, std::string encrypt_string)
 {
@@ -155,5 +168,37 @@ std::string GetAppVersion()
                                        std::string("Version"),
                                        "");
     return ver_txt;
+}
+
+BOOLEAN CheckCertificateInStore(PCCERT_CONTEXT pCert, LPTSTR store_name)
+{
+    HCERTSTORE hSystemStore;
+    if (hSystemStore = CertOpenSystemStore(NULL, store_name)) {
+        MORDOR_LOG_DEBUG(g_log) << "The system store "<< store_name <<" is open";
+    } else {
+        PrintLastErrorMessage(L"CertOpenSystemStore");
+        return FALSE;
+    }
+
+    PCCERT_CONTEXT pc = CertFindCertificateInStore( hSystemStore,
+                                                    X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+                                                    0,
+                                                    CERT_FIND_ISSUER_NAME,
+                                                    (const void *)(&(pCert->pCertInfo->Issuer)),
+                                                    NULL);
+    BOOLEAN ret = FALSE;
+    if (pc != NULL) {
+        ret = TRUE;
+        CertFreeCertificateContext(pc);
+        MORDOR_LOG_INFO(g_log) << "Certificate check return TRUE";
+    } else {
+        ret = FALSE;
+        PrintLastErrorMessage(L"CertFindCertificateInStore");
+    }
+    CertCloseStore(hSystemStore, NULL);
+
+    PCCERT_CHAIN_CONTEXT     pChainContext;
+    ret = CertGetCertificateChain(NULL, pCert, NULL, NULL, NULL, CERT_CHAIN_CACHE_END_CERT, NULL, &pChainContext);
+    return ret;
 }
 }

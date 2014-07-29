@@ -1,20 +1,16 @@
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
+ #pragma once
 
-#pragma once
+//Defines used for production versions
+#include "targetver.h"
+#undef _WIN32_WINNT
+#include <mordor/pch.h>
 
-#define INCL_WINSOCK_API_TYPEDEFS 1
-//#include <mordor/pch.h>
+#include <openssl/err.h>
 
-//#include "targetver.h"
+#include <winldap.h>
+#define SECURITY_WIN32
+#include <WinCrypt.h>
 
-//#include <windows.h>
+#pragma comment(lib, "wldap32.lib")
+#pragma comment(lib, "crypt32.lib")
 
-#include <stdio.h>
-#include <tchar.h>
-
-
-
-// TODO: reference additional headers your program requires here

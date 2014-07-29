@@ -76,7 +76,7 @@ int Settings::ParseCLI(int argc, char* argv[])
 
 bool Settings::IsConfigMode()
 {
-    return true;
+    return false;
 }
 int Settings::PersistToRegistry()
 {
@@ -96,6 +96,10 @@ bool Settings::IgnoreSslCheck() const
 { return vm_.count("ignore_certificates")>0;}
 std::string Settings::CurrentVersion() const
     {return GetAppVersion();}
+int Settings::LdapQueryTimeout() const
+{ return vm_["ldap_req_timeout"].as<int>(); }
+int Settings::LdapPageSize() const
+{ return vm_["ldp_page_size"].as<int>(); }
 std::string Settings::LdapHost() const
     {return "";}
 int Settings::LdapPort() const
