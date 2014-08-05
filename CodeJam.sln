@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mordor", "..\..\work\SCM\mo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SysEvent", "SysEvent\SysEvent.vcxproj", "{E94B4255-B91A-4189-AC9C-100B792174D1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ldptest", "..\ldptest\ldptest.vcxproj", "{2066A27A-8FCE-481A-8807-5E7D29FAF8A0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -35,6 +37,12 @@ Global
 		{E94B4255-B91A-4189-AC9C-100B792174D1}.Release|Win32.ActiveCfg = Release|Win32
 		{E94B4255-B91A-4189-AC9C-100B792174D1}.Release|Win32.Build.0 = Release|Win32
 		{E94B4255-B91A-4189-AC9C-100B792174D1}.Release|x64.ActiveCfg = Release|Win32
+		{2066A27A-8FCE-481A-8807-5E7D29FAF8A0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2066A27A-8FCE-481A-8807-5E7D29FAF8A0}.Debug|Win32.Build.0 = Debug|Win32
+		{2066A27A-8FCE-481A-8807-5E7D29FAF8A0}.Debug|x64.ActiveCfg = Debug|Win32
+		{2066A27A-8FCE-481A-8807-5E7D29FAF8A0}.Release|Win32.ActiveCfg = Release|Win32
+		{2066A27A-8FCE-481A-8807-5E7D29FAF8A0}.Release|Win32.Build.0 = Release|Win32
+		{2066A27A-8FCE-481A-8807-5E7D29FAF8A0}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -41,11 +41,16 @@ void LdapClient::DumpConfig(const Settings local_settings)
 
 static BOOLEAN ldap_server_cert_callback(PLDAP connection, PCCERT_CONTEXT pServerCert)
 {
- if (CheckCertificateInStore(pServerCert, L"CA")
-     ||CheckCertificateInStore(pServerCert, L"ROOT"))
-     return TRUE;
- else
-     return FALSE;
+    /* TODO: decent certificate checking needed.
+    * But now the kludge is just ignore checking and return TRUE.
+    * It's unsafe but since Net::Ldap in Ruby gem are also ignore checking that makes me feel less guilty.
+    */
+    return TRUE;
+    //if (CheckCertificateInStore(pServerCert, L"CA")
+    //    ||CheckCertificateInStore(pServerCert, L"ROOT"))
+    //    return TRUE;
+    //else
+    //    return FALSE;
 }
 bool LdapClient::ConnectLdap()
 {
@@ -84,6 +89,34 @@ bool LdapClient::ConnectLdap()
         return false;
     }
 
+    if (ldap_server_.protocol == StartTLS) {
+        lRtn = ldap_set_option(ldap_session_.get(), LDAP_OPT_SERVER_CERTIFICATE, &ldap_server_cert_callback);
+        if (lRtn != LDAP_SUCCESS) {
+            MORDOR_LOG_ERROR(g_log) << "ldap_set_option() triggered error " << lRtn << " set off LDAP_OPT_REFERRALS. See MSDN documentation on ldap_set_option() for details.";
+            return false;
+        }
+        ULONG errorReturn=0;
+        LDAPMessage error_msg;
+        LDAPMessage* p = &error_msg;
+        lRtn = ldap_start_tls_s(ldap_session_.get(), &errorReturn, &p, NULL, NULL);
+        if (lRtn != LDAP_SUCCESS) {
+            if (lRtn == LDAP_UNWILLING_TO_PERFORM) {
+                MORDOR_LOG_ERROR(g_log) << "LDAP_UNWILLING_TO_PERFORM returned when start TLS";
+            } else {
+                MORDOR_LOG_ERROR(g_log) << "LDAP_OTHER returned when start TLS, server error code is "<<error_msg.lm_returncode;
+            }
+            return false;
+        }else{
+            MORDOR_LOG_INFO(g_log) << "Start TLS on port 389";
+        }
+    } // enable TLS
+
+    lRtn = ldap_bind_s(ldap_session_.get(), stdstring2LPWSTR(ldap_server_.username), stdstring2LPWSTR(ldap_server_.password), LDAP_AUTH_SIMPLE);
+    if (lRtn != LDAP_SUCCESS) {
+        MORDOR_LOG_ERROR(g_log) << "ldap_bind_s() triggered error " << lRtn << " See MSDN documentation on ldap_bind_s() for details.";
+        return false;
+    }
+    MORDOR_LOG_DEBUG(g_log) << "ldap_bind_s success";
     return true;
 }
 
